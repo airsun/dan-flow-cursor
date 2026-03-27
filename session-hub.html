@@ -168,9 +168,14 @@
     display: flex; flex-direction: column; gap: 8px;
   }
   .wb-card:hover { background: var(--bg-hover); border-color: var(--text-muted); transform: translateY(-1px); }
-  .wb-card.card-waiting {
+  .wb-card.card-waiting-hard {
     border-color: var(--amber-border);
     border-left: 3px solid var(--amber);
+    background: rgba(245,158,66,0.06);
+  }
+  .wb-card.card-waiting-soft {
+    border-color: rgba(245,158,66,0.18);
+    border-left: 3px solid rgba(245,158,66,0.45);
   }
   .wb-card.card-executing {
     border-left: 3px solid var(--green);
@@ -197,6 +202,20 @@
   .wb-card .card-footer .goto {
     color: var(--amber); font-weight: 600;
   }
+  .wb-card .card-dismiss {
+    position:absolute; top:6px; right:8px;
+    background:none; border:none; color:var(--text-muted);
+    cursor:pointer; font-size:14px; line-height:1; padding:2px 4px;
+    border-radius:3px; opacity:0; transition:opacity 0.15s;
+  }
+  .wb-card:hover .card-dismiss { opacity:1; }
+  .wb-card .card-dismiss:hover { color:var(--text); background:var(--bg-hover); }
+  .wb-card .card-input-badge {
+    font-size:9px; font-weight:700; padding:1px 5px; border-radius:3px;
+    letter-spacing:0.3px; flex-shrink:0;
+  }
+  .input-badge-hard { background:rgba(245,158,66,0.25); color:var(--amber); }
+  .input-badge-soft { background:rgba(245,158,66,0.10); color:rgba(245,158,66,0.6); }
 
   /* ── Tabs ── */
   #wb-tabs {
@@ -474,15 +493,30 @@ elTabs.addEventListener('click', function(e) {
 });
 
 /* ── Workbench Cards ── */
-function cardClass(state) {
-  if (state === 'waiting_input') return 'card-waiting';
-  if (state === 'executing') return 'card-executing';
+function cardClass(s) {
+  if (s.state === 'waiting_input') {
+    return s.inputType === 'hard' ? 'card-waiting-hard' : 'card-waiting-soft';
+  }
+  if (s.state === 'executing') return 'card-executing';
   return 'card-idle';
 }
 
 function buildCard(s) {
   var div = document.createElement('div');
-  div.className = 'wb-card ' + cardClass(s.state);
+  div.className = 'wb-card ' + cardClass(s);
+
+  if (s.state === 'waiting_input') {
+    var dismiss = document.createElement('button');
+    dismiss.className = 'card-dismiss';
+    dismiss.textContent = '×';
+    dismiss.title = 'dismiss';
+    dismiss.addEventListener('click', function(e) {
+      e.stopPropagation();
+      fetch('/api/dismiss/' + encodeURIComponent(s.key), {method:'POST'});
+      div.style.display = 'none';
+    });
+    div.appendChild(dismiss);
+  }
 
   var top = document.createElement('div');
   top.className = 'card-top';
@@ -500,6 +534,13 @@ function buildCard(s) {
   proj.className = 'card-project';
   proj.textContent = s.project;
   top.appendChild(proj);
+
+  if (s.state === 'waiting_input') {
+    var badge = document.createElement('span');
+    badge.className = 'card-input-badge ' + (s.inputType === 'hard' ? 'input-badge-hard' : 'input-badge-soft');
+    badge.textContent = s.inputType === 'hard' ? 'BLOCKED' : 'IDLE?';
+    top.appendChild(badge);
+  }
 
   div.appendChild(top);
 

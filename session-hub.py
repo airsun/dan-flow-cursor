@@ -13,10 +13,14 @@ PORT = 7890
 CURSOR_BASE = Path.home() / ".cursor" / "projects"
 CLAUDE_BASE = Path.home() / ".claude" / "projects"
 ACTIVE_THRESHOLD = 600
+SOFT_INPUT_THRESHOLD = 180  # 3 min: soft waiting_input → idle
 POLL_INTERVAL = 2.0
+
+HARD_INPUT_TOOLS = {"AskUserQuestion", "AskQuestion"}
 
 sessions_lock = threading.Lock()
 sessions_data: Dict[str, dict] = {}
+dismissed_keys: set[str] = set()
 
 # ═══════════════════════════════════════════════════════════════
 #  Session Discovery & Parsing
@@ -106,19 +110,38 @@ def parse_claude_line(raw: str) -> dict | None:
     if t in ("user", "assistant"):
         msg = obj.get("message", {})
         content = msg.get("content", "")
+        hard_input = False
+        hard_question = ""
         if isinstance(content, list):
             text = " ".join(
                 c.get("text", "") for c in content
                 if isinstance(c, dict) and c.get("type") == "text"
             )
+            if t == "assistant":
+                for c in content:
+                    if (isinstance(c, dict) and c.get("type") == "tool_use"
+                            and c.get("name") in HARD_INPUT_TOOLS):
+                        hard_input = True
+                        inp = c.get("input", {})
+                        qs = inp.get("questions", inp.get("question", ""))
+                        if isinstance(qs, list) and qs:
+                            hard_question = qs[0].get("question", "")
+                        elif isinstance(qs, str):
+                            hard_question = qs
+                        break
         else:
             text = str(content)
-        if not text:
+        if not text and not hard_input:
             return None
         role = t
         if role == "assistant":
             role = "thinking" if is_thinking_content(text) else "assistant"
-        return {"role": role, "text": text, "ts": ts}
+        result = {"role": role, "text": text or hard_question, "ts": ts}
+        if hard_input:
+            result["hard_input"] = True
+            if hard_question:
+                result["hard_question"] = hard_question
+        return result
     elif t == "progress":
         data = obj.get("data", {})
         desc = data.get("hookName", data.get("type", t))
@@ -137,6 +160,7 @@ def update_session(sess: dict, path: Path, source: str):
             new_data = f.read()
             sess["file_pos"] = f.tell()
         sess["last_modified"] = mtime
+        new_count = 0
         for line in new_data.split("\n"):
             line = line.strip()
             if not line:
@@ -146,8 +170,11 @@ def update_session(sess: dict, path: Path, source: str):
                           else parse_claude_line(line))
                 if parsed:
                     sess["messages"].append(parsed)
+                    new_count += 1
             except (json.JSONDecodeError, KeyError):
                 pass
+        if new_count > 0:
+            undismiss_on_activity(str(path))
     except Exception:
         pass
 
@@ -193,14 +220,18 @@ def _clean_snippet(text: str, max_len: int = 80) -> str:
     return (t[:max_len] + "…") if len(t) > max_len else t
 
 
-def _session_state(messages: list, active: bool) -> tuple[str, str, str | None]:
-    """Return (state, snippet, phase) by scanning messages in reverse."""
+def _session_state(messages: list, active: bool, age_sec: int
+                    ) -> tuple[str, str, str | None, str | None]:
+    """Return (state, snippet, phase, inputType) by scanning messages in reverse.
+    inputType: 'hard' (AskQuestion/approval) | 'soft' (just assistant replied) | None
+    """
     if not active:
-        return "idle", "", None
+        return "idle", "", None, None
 
     last_conv_role = None
     last_conv_text = ""
     last_phase = None
+    has_hard_input = False
 
     for m in reversed(messages):
         role = m["role"]
@@ -209,13 +240,18 @@ def _session_state(messages: list, active: bool) -> tuple[str, str, str | None]:
         if role in ("user", "assistant") and last_conv_role is None:
             last_conv_role = role
             last_conv_text = m.get("text", "")
+            has_hard_input = m.get("hard_input", False)
             break
 
     if last_conv_role == "assistant":
-        return "waiting_input", _clean_snippet(last_conv_text), None
+        if has_hard_input:
+            return "waiting_input", _clean_snippet(last_conv_text), None, "hard"
+        if age_sec > SOFT_INPUT_THRESHOLD:
+            return "idle", "", None, None
+        return "waiting_input", _clean_snippet(last_conv_text), None, "soft"
     elif last_conv_role == "user":
-        return "executing", _clean_snippet(last_conv_text), last_phase
-    return "idle", "", None
+        return "executing", _clean_snippet(last_conv_text), last_phase, None
+    return "idle", "", None, None
 
 
 def get_sessions_api():
@@ -226,8 +262,13 @@ def get_sessions_api():
             if not s["messages"]:
                 continue
             active = (now - s["last_modified"]) < ACTIVE_THRESHOLD
+            age_sec = int(now - s["last_modified"])
             user_turns = sum(1 for m in s["messages"] if m["role"] == "user")
-            state, snippet, phase = _session_state(s["messages"], active)
+            state, snippet, phase, input_type = _session_state(
+                s["messages"], active, age_sec)
+            if state == "waiting_input" and key in dismissed_keys:
+                state = "idle"
+                input_type = None
             result.append({
                 "id": s["id"],
                 "key": key,
@@ -237,13 +278,24 @@ def get_sessions_api():
                 "msgCount": len(s["messages"]),
                 "active": active,
                 "lastModified": s["last_modified"],
-                "ageSec": int(now - s["last_modified"]),
+                "ageSec": age_sec,
                 "state": state,
                 "snippet": snippet,
                 "phase": phase,
+                "inputType": input_type,
             })
     result.sort(key=lambda x: (not x["active"], -x["lastModified"]))
     return result
+
+
+def dismiss_session(session_key: str):
+    dismissed_keys.add(session_key)
+    return {"ok": True}
+
+
+def undismiss_on_activity(key: str):
+    """Auto-undismiss when a session gets new user activity."""
+    dismissed_keys.discard(key)
 
 
 def get_session_messages_api(session_key: str):
@@ -279,6 +331,23 @@ class Handler(BaseHTTPRequestHandler):
         else:
             self.send_error(404)
 
+    def do_POST(self):
+        path = urlparse(self.path).path
+        if path.startswith("/api/dismiss/"):
+            key = unquote(self.path[len("/api/dismiss/"):])
+            self._json(dismiss_session(key))
+        else:
+            self.send_error(404)
+
+    def _cors_headers(self):
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+
+    def do_OPTIONS(self):
+        self.send_response(204)
+        self._cors_headers()
+        self.end_headers()
+
     def _html(self, content):
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
@@ -288,7 +357,7 @@ class Handler(BaseHTTPRequestHandler):
     def _json(self, data):
         self.send_response(200)
         self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Access-Control-Allow-Origin", "*")
+        self._cors_headers()
         self.end_headers()
         self.wfile.write(json.dumps(data, ensure_ascii=False, default=str).encode("utf-8"))
 
