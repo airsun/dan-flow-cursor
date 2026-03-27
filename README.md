@@ -12,17 +12,19 @@ python3 session-hub.py
 
 ## 看板功能
 
-- **Workbench 首页** — 所有会话以卡片网格展示，支持按 全部 / 活跃 / Cursor / Claude 分类筛选
-- **Needs Input 置顶** — 等待用户输入的会话自动浮到顶部，琥珀色高亮
+- **Workbench 首页** — 所有会话以卡片网格展示，按 全部 / 活跃 / Cursor / Claude 筛选
+- **Needs Input 置顶** — 等待输入的会话琥珀色高亮浮到顶部，区分 BLOCKED（hard）和 IDLE?（soft），支持 dismiss
 - **状态感知** — 三色状态点：🟢 执行中 / 🟠 等待输入 / ⚪ 空闲
+- **子代理聚合** — 主会话卡片上用点阵展示子代理状态，点击展开浮层查看详情并可跳转子代理对话
 - **对话详情** — 点击卡片查看完整对话，Markdown 渲染 + 代码高亮
-- **可收起侧栏** — 展开看全貌，收起省空间（状态点始终可见）
+- **可收起侧栏** — 扁平列表仅显示主会话，子代理数量以角标形式呈现
 
 ## 技术细节
 
 - Python 3 标准库，零依赖，单文件后端
 - 自动扫描 `~/.cursor/projects/` 和 `~/.claude/projects/` 下的 `.jsonl` 转录文件
-- 2 秒轮询，后端推断会话状态（最后一条对话消息是 user → 执行中，assistant → 等待输入）
+- 自动识别 `subagents/` 目录下的子代理文件并与主会话建立父子关系
+- 2 秒轮询，后端推断会话状态（user → 执行中，assistant → 等待输入，AskQuestion tool_use → hard blocked）
 - 前端通过 CDN 加载 marked / highlight.js / DOMPurify
 - 默认端口 `7890`，如需修改编辑 `session-hub.py` 中的 `PORT`
 

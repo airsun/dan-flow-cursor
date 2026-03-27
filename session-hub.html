@@ -325,6 +325,125 @@
     color: var(--text); font-size: 11px; padding: 4px 8px; border-radius: 4px;
     white-space: nowrap; z-index: 100; pointer-events: none;
   }
+
+  /* ── Sub-agent dots on cards ── */
+  .card-sub-dots {
+    display: flex; align-items: center; gap: 3px; flex-wrap: wrap;
+    padding: 2px 0;
+  }
+  .card-sub-dots .sub-dot {
+    width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0;
+  }
+  .sub-dot-executing { background: var(--green); }
+  .sub-dot-waiting { background: var(--amber); }
+  .sub-dot-idle { background: var(--text-muted); }
+  .card-sub-more {
+    font-size: 9px; color: var(--text-muted); margin-left: 2px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  }
+
+  /* ── Card Overlay (low-flying retro) ── */
+  .card-overlay-backdrop {
+    position: fixed; inset: 0; z-index: 200;
+    background: rgba(10,10,16,0.4);
+    animation: ov-fade 0.12s ease;
+  }
+  @keyframes ov-fade { from { opacity: 0; } to { opacity: 1; } }
+
+  .card-overlay {
+    position: fixed; z-index: 201;
+    top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: min(660px, 88vw); max-height: 78vh;
+    background: var(--bg-card);
+    border: 1px solid var(--text-muted);
+    border-radius: 6px;
+    overflow-y: auto;
+    animation: ov-rise 0.15s ease;
+  }
+  @keyframes ov-rise {
+    from { opacity: 0; transform: translate(-50%, -49%); }
+    to   { opacity: 1; transform: translate(-50%, -50%); }
+  }
+
+  .card-overlay-header {
+    padding: 16px 20px 12px;
+    border-bottom: 1px dashed var(--border);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card-overlay-header .card-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .card-overlay-header .card-source {
+    font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 3px;
+    letter-spacing: 0.5px;
+  }
+  .overlay-project {
+    font-size: 14px; font-weight: 600; color: var(--text); flex: 1;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .card-overlay-close {
+    background: none; border: 1px solid var(--border); color: var(--text-dim);
+    cursor: pointer; font-size: 11px; padding: 3px 10px; border-radius: 4px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  }
+  .card-overlay-close:hover { color: var(--text); border-color: var(--text-dim); }
+
+  .card-overlay-body { padding: 14px 20px 18px; }
+  .overlay-snippet {
+    font-size: 13px; color: var(--text-dim); line-height: 1.55; margin-bottom: 12px;
+  }
+  .overlay-meta {
+    font-size: 11px; color: var(--text-muted); margin-bottom: 16px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    display: flex; gap: 12px; flex-wrap: wrap;
+  }
+  .overlay-open-btn {
+    display: inline-block; background: none; border: 1px solid var(--purple);
+    color: var(--purple); font-size: 11px; font-weight: 600; padding: 4px 14px;
+    border-radius: 4px; cursor: pointer; margin-bottom: 16px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    letter-spacing: 0.3px; transition: all 0.12s;
+  }
+  .overlay-open-btn:hover { background: rgba(167,139,250,0.1); }
+
+  .sub-section-label {
+    font-size: 10px; font-weight: 700; color: var(--text-muted);
+    letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 10px;
+    padding-bottom: 6px; border-bottom: 1px dashed var(--border);
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  }
+  .sub-list { display: flex; flex-direction: column; gap: 4px; }
+  .sub-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 12px; border-radius: 4px;
+    background: var(--bg-surface); border: 1px solid var(--border);
+    cursor: pointer; transition: all 0.1s;
+  }
+  .sub-item:hover { background: var(--bg-hover); border-color: var(--text-muted); }
+  .sub-item .sub-item-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .sub-item .sub-item-id {
+    font-size: 11px; color: var(--text);
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .sub-item .sub-item-state {
+    font-size: 9px; font-weight: 600; padding: 1px 5px; border-radius: 3px;
+    letter-spacing: 0.3px;
+  }
+  .sub-state-executing { background: var(--green-dim); color: var(--green); }
+  .sub-state-waiting { background: var(--amber-dim); color: var(--amber); }
+  .sub-state-idle { background: rgba(68,68,90,0.3); color: var(--text-muted); }
+  .sub-item .sub-item-meta {
+    font-size: 10px; color: var(--text-muted);
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  }
+
+  /* ── Sidebar sub count badge ── */
+  .sidebar-sub-badge {
+    font-size: 9px; font-weight: 600; padding: 0 5px; border-radius: 8px;
+    background: rgba(167,139,250,0.1); color: var(--purple);
+    margin-left: auto; flex-shrink: 0; line-height: 16px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  }
+  .sidebar-collapsed .sidebar-sub-badge { display: none; }
 </style>
 </head>
 <body>
@@ -430,12 +549,13 @@ function showConversation() {
 
 /* ── Badge helpers ── */
 function badgeClass(source) {
-  if (source === 'cursor') return 'badge-cursor';
+  if (source === 'cursor' || source === 'cursor-sub') return 'badge-cursor';
   if (source === 'claude') return 'badge-claude';
   return 'badge-claude-sub';
 }
 function badgeText(source) {
   if (source === 'cursor') return 'CUR';
+  if (source === 'cursor-sub') return 'CUR↓';
   if (source === 'claude') return 'CC';
   return 'CC↓';
 }
@@ -551,6 +671,25 @@ function buildCard(s) {
     div.appendChild(snip);
   }
 
+  if (s.children && s.children.length > 0) {
+    var dotsRow = document.createElement('div');
+    dotsRow.className = 'card-sub-dots';
+    var maxDots = 10;
+    s.children.slice(0, maxDots).forEach(function(c) {
+      var d = document.createElement('span');
+      var dCls = c.state === 'executing' ? 'executing' : c.state === 'waiting_input' ? 'waiting' : 'idle';
+      d.className = 'sub-dot sub-dot-' + dCls;
+      dotsRow.appendChild(d);
+    });
+    if (s.children.length > maxDots) {
+      var more = document.createElement('span');
+      more.className = 'card-sub-more';
+      more.textContent = '+' + (s.children.length - maxDots);
+      dotsRow.appendChild(more);
+    }
+    div.appendChild(dotsRow);
+  }
+
   var footer = document.createElement('div');
   footer.className = 'card-footer';
 
@@ -566,6 +705,9 @@ function buildCard(s) {
 
   var right = document.createElement('span');
   right.textContent = s.turns + '轮 · ' + s.msgCount + ' msgs';
+  if (s.subCount > 0) {
+    right.textContent += ' · ' + s.subCount + ' sub';
+  }
   if (s.state === 'waiting_input') {
     right.className = 'goto';
     right.textContent = '▸';
@@ -575,14 +717,154 @@ function buildCard(s) {
   div.appendChild(footer);
 
   div.addEventListener('click', function() {
-    currentKey = s.key;
-    lastMsgCount = 0;
-    autoScroll = true;
-    showConversation();
-    loadMessages();
+    if (s.children && s.children.length > 0) {
+      openCardOverlay(s);
+    } else {
+      navigateToSession(s.key);
+    }
   });
 
   return div;
+}
+
+function navigateToSession(key) {
+  currentKey = key;
+  lastMsgCount = 0;
+  autoScroll = true;
+  showConversation();
+  loadMessages();
+}
+
+function subStateClass(state) {
+  if (state === 'executing') return 'sub-state-executing';
+  if (state === 'waiting_input') return 'sub-state-waiting';
+  return 'sub-state-idle';
+}
+function subStateText(state) {
+  if (state === 'executing') return 'RUN';
+  if (state === 'waiting_input') return 'WAIT';
+  return 'IDLE';
+}
+
+function openCardOverlay(s) {
+  closeCardOverlay();
+
+  var backdrop = document.createElement('div');
+  backdrop.className = 'card-overlay-backdrop';
+  backdrop.id = 'overlay-backdrop';
+  backdrop.addEventListener('click', closeCardOverlay);
+
+  var panel = document.createElement('div');
+  panel.className = 'card-overlay';
+  panel.id = 'overlay-panel';
+
+  var hdr = document.createElement('div');
+  hdr.className = 'card-overlay-header';
+  var hDot = document.createElement('span');
+  hDot.className = 'card-dot ' + dotClass(s.state);
+  hdr.appendChild(hDot);
+  var hSrc = document.createElement('span');
+  hSrc.className = 'card-source ' + badgeClass(s.source);
+  hSrc.textContent = badgeText(s.source);
+  hdr.appendChild(hSrc);
+  var hProj = document.createElement('span');
+  hProj.className = 'overlay-project';
+  hProj.textContent = s.project;
+  hdr.appendChild(hProj);
+  var hClose = document.createElement('button');
+  hClose.className = 'card-overlay-close';
+  hClose.textContent = 'ESC';
+  hClose.addEventListener('click', closeCardOverlay);
+  hdr.appendChild(hClose);
+  panel.appendChild(hdr);
+
+  var body = document.createElement('div');
+  body.className = 'card-overlay-body';
+
+  if (s.snippet) {
+    var snipEl = document.createElement('div');
+    snipEl.className = 'overlay-snippet';
+    snipEl.textContent = s.snippet;
+    body.appendChild(snipEl);
+  }
+
+  var meta = document.createElement('div');
+  meta.className = 'overlay-meta';
+  var metaParts = [s.turns + ' turns', s.msgCount + ' msgs', ageStr(s.ageSec) + ' ago', s.id.substring(0,8) + '…'];
+  metaParts.forEach(function(t) {
+    var sp = document.createElement('span');
+    sp.textContent = t;
+    meta.appendChild(sp);
+  });
+  body.appendChild(meta);
+
+  var openBtn = document.createElement('button');
+  openBtn.className = 'overlay-open-btn';
+  openBtn.textContent = '▸ 查看会话';
+  openBtn.addEventListener('click', function() {
+    closeCardOverlay();
+    navigateToSession(s.key);
+  });
+  body.appendChild(openBtn);
+
+  if (s.children && s.children.length > 0) {
+    var label = document.createElement('div');
+    label.className = 'sub-section-label';
+    label.textContent = 'Sub-agents (' + s.children.length + ')';
+    body.appendChild(label);
+
+    var list = document.createElement('div');
+    list.className = 'sub-list';
+    s.children.forEach(function(c) {
+      var item = document.createElement('div');
+      item.className = 'sub-item';
+
+      var d = document.createElement('span');
+      d.className = 'sub-item-dot ' + dotClass(c.state).replace('dot-', 'sub-dot-');
+      item.appendChild(d);
+
+      var idEl = document.createElement('span');
+      idEl.className = 'sub-item-id';
+      idEl.textContent = c.id;
+      item.appendChild(idEl);
+
+      var st = document.createElement('span');
+      st.className = 'sub-item-state ' + subStateClass(c.state);
+      st.textContent = subStateText(c.state);
+      item.appendChild(st);
+
+      var mEl = document.createElement('span');
+      mEl.className = 'sub-item-meta';
+      mEl.textContent = c.msgCount + ' msgs · ' + ageStr(c.ageSec);
+      item.appendChild(mEl);
+
+      item.addEventListener('click', function() {
+        closeCardOverlay();
+        navigateToSession(c.key);
+      });
+      list.appendChild(item);
+    });
+    body.appendChild(list);
+  }
+
+  panel.appendChild(body);
+  document.body.appendChild(backdrop);
+  document.body.appendChild(panel);
+
+  var escHandler = function(e) {
+    if (e.key === 'Escape') {
+      closeCardOverlay();
+      document.removeEventListener('keydown', escHandler);
+    }
+  };
+  document.addEventListener('keydown', escHandler);
+}
+
+function closeCardOverlay() {
+  var b = document.getElementById('overlay-backdrop');
+  var p = document.getElementById('overlay-panel');
+  if (b) b.remove();
+  if (p) p.remove();
 }
 
 function filterSessions(sessions, tab) {
@@ -697,6 +979,13 @@ function buildSessionItem(s) {
   name.textContent = s.project;
   top.appendChild(name);
 
+  if (s.subCount > 0) {
+    var subBadge = document.createElement('span');
+    subBadge.className = 'sidebar-sub-badge';
+    subBadge.textContent = s.subCount;
+    top.appendChild(subBadge);
+  }
+
   div.appendChild(top);
 
   var meta = document.createElement('div');
@@ -705,11 +994,11 @@ function buildSessionItem(s) {
   div.appendChild(meta);
 
   div.addEventListener('click', function() {
-    currentKey = s.key;
-    lastMsgCount = 0;
-    autoScroll = true;
-    showConversation();
-    loadMessages();
+    if (s.children && s.children.length > 0) {
+      openCardOverlay(s);
+    } else {
+      navigateToSession(s.key);
+    }
   });
   return div;
 }

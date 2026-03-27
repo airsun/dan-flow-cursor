@@ -27,39 +27,62 @@ dismissed_keys: set[str] = set()
 # ═══════════════════════════════════════════════════════════════
 
 def discover_files():
+    """Return list of (source, path, parent_key_or_None)."""
     found = []
     if CURSOR_BASE.exists():
-        for p in CURSOR_BASE.glob("*/agent-transcripts/**/*.jsonl"):
-            found.append(("cursor", p))
+        for proj_dir in CURSOR_BASE.iterdir():
+            if not proj_dir.is_dir():
+                continue
+            at_dir = proj_dir / "agent-transcripts"
+            if not at_dir.exists():
+                continue
+            for sess_dir in at_dir.iterdir():
+                if not sess_dir.is_dir():
+                    continue
+                main_file = sess_dir / (sess_dir.name + ".jsonl")
+                if main_file.exists():
+                    found.append(("cursor", main_file, None))
+                for sub in sess_dir.glob("subagents/*.jsonl"):
+                    parent_key = str(main_file) if main_file.exists() else None
+                    found.append(("cursor-sub", sub, parent_key))
     if CLAUDE_BASE.exists():
         for proj in CLAUDE_BASE.iterdir():
             if not proj.is_dir():
                 continue
             for p in proj.glob("*.jsonl"):
-                found.append(("claude", p))
+                found.append(("claude", p, None))
             for p in proj.glob("*/subagents/agent-*.jsonl"):
-                found.append(("claude-sub", p))
+                parent_name = p.parent.parent.name
+                parent_file = proj / (parent_name + ".jsonl")
+                parent_key = str(parent_file) if parent_file.exists() else None
+                found.append(("claude-sub", p, parent_key))
     return found
 
 
 def session_id(path: Path, source: str) -> str:
-    if source == "cursor":
+    if source in ("cursor", "cursor-sub"):
         return path.stem
     elif source == "claude-sub":
         return f"{path.parent.parent.name[:8]}>{path.stem[:12]}"
     return path.stem
 
 
-def project_name(path: Path, source: str) -> str:
-    if source == "cursor":
-        raw = path.parent.parent.parent.name
-    else:
-        raw = path.parent.name
+def _extract_project_name(raw: str) -> str:
     for prefix in ("Users-gunegg-Works-", "Users-gunegg-", "-Users-gunegg-Works-", "-Users-gunegg-"):
         if raw.startswith(prefix):
             raw = raw[len(prefix):]
             break
     return raw.replace("-", "/", 2).replace("-", " ") if "/" not in raw else raw
+
+
+def project_name(path: Path, source: str) -> str:
+    if source == "cursor":
+        raw = path.parent.parent.parent.name
+    elif source == "cursor-sub":
+        raw = path.parent.parent.parent.parent.name
+    else:
+        raw = path.parent.name
+    return _extract_project_name(raw)
 
 
 def is_thinking_content(text: str) -> bool:
@@ -184,7 +207,7 @@ def watcher_loop():
         try:
             found = discover_files()
             with sessions_lock:
-                for source, path in found:
+                for source, path, parent_key in found:
                     key = str(path)
                     if key not in sessions_data:
                         sessions_data[key] = {
@@ -195,8 +218,20 @@ def watcher_loop():
                             "file_pos": 0,
                             "last_modified": 0,
                             "path": str(path),
+                            "parentKey": parent_key,
+                            "children": [],
                         }
-                    update_session(sessions_data[key], path, source)
+                    s = sessions_data[key]
+                    if parent_key and s["parentKey"] != parent_key:
+                        s["parentKey"] = parent_key
+                    update_session(s, path, source)
+                # rebuild children lists
+                for s in sessions_data.values():
+                    s["children"] = []
+                for key, s in sessions_data.items():
+                    pk = s.get("parentKey")
+                    if pk and pk in sessions_data:
+                        sessions_data[pk]["children"].append(key)
         except Exception:
             pass
         time.sleep(POLL_INTERVAL)
@@ -254,6 +289,34 @@ def _session_state(messages: list, active: bool, age_sec: int
     return "idle", "", None, None
 
 
+def _build_session_entry(key, s, now):
+    active = (now - s["last_modified"]) < ACTIVE_THRESHOLD
+    age_sec = int(now - s["last_modified"])
+    user_turns = sum(1 for m in s["messages"] if m["role"] == "user")
+    src = s["source"]
+    parse_src = "cursor" if src.startswith("cursor") else "claude"
+    state, snippet, phase, input_type = _session_state(
+        s["messages"], active, age_sec)
+    if state == "waiting_input" and key in dismissed_keys:
+        state = "idle"
+        input_type = None
+    return {
+        "id": s["id"],
+        "key": key,
+        "source": src,
+        "project": s["project"],
+        "turns": user_turns,
+        "msgCount": len(s["messages"]),
+        "active": active,
+        "lastModified": s["last_modified"],
+        "ageSec": age_sec,
+        "state": state,
+        "snippet": snippet,
+        "phase": phase,
+        "inputType": input_type,
+    }
+
+
 def get_sessions_api():
     now = time.time()
     result = []
@@ -261,29 +324,18 @@ def get_sessions_api():
         for key, s in sessions_data.items():
             if not s["messages"]:
                 continue
-            active = (now - s["last_modified"]) < ACTIVE_THRESHOLD
-            age_sec = int(now - s["last_modified"])
-            user_turns = sum(1 for m in s["messages"] if m["role"] == "user")
-            state, snippet, phase, input_type = _session_state(
-                s["messages"], active, age_sec)
-            if state == "waiting_input" and key in dismissed_keys:
-                state = "idle"
-                input_type = None
-            result.append({
-                "id": s["id"],
-                "key": key,
-                "source": s["source"],
-                "project": s["project"],
-                "turns": user_turns,
-                "msgCount": len(s["messages"]),
-                "active": active,
-                "lastModified": s["last_modified"],
-                "ageSec": age_sec,
-                "state": state,
-                "snippet": snippet,
-                "phase": phase,
-                "inputType": input_type,
-            })
+            if s.get("parentKey"):
+                continue
+            entry = _build_session_entry(key, s, now)
+            children_entries = []
+            for ck in s.get("children", []):
+                cs = sessions_data.get(ck)
+                if cs and cs["messages"]:
+                    children_entries.append(_build_session_entry(ck, cs, now))
+            children_entries.sort(key=lambda x: -x["lastModified"])
+            entry["children"] = children_entries
+            entry["subCount"] = len(children_entries)
+            result.append(entry)
     result.sort(key=lambda x: (not x["active"], -x["lastModified"]))
     return result
 
