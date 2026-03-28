@@ -57,16 +57,16 @@
 
 ## 6. Sync agent
 
-- [ ] 6.1 Implement file discovery in `agent/danflow_sync.py` — scan cursor and claude base directories for *.jsonl, classify source type, detect subagent files and parent relationships
-- [ ] 6.2 Implement project metadata extraction — resolve git remote URL via `git -C <dir> remote get-url origin`, compute project_hint by stripping user-specific path prefixes
-- [ ] 6.3 Implement config loading from `~/.dan-flow/config.json` (stdlib json, no YAML dep)
-- [ ] 6.4 Implement state persistence — load/save `~/.dan-flow/sync-state.json` with per-file offsets, graceful handling of missing/corrupt state
-- [ ] 6.5 Implement handshake — POST file list + local sizes to `/sync/handshake`, receive server offsets, compute deltas
-- [ ] 6.6 Implement incremental push — read new bytes from each changed file, POST to `/sync/push` in chunks of batch_size, advance local offset on ack
-- [ ] 6.7 Implement main loop — poll interval scanning, detect new files, push changes, handle sleep/wake via time gap detection triggering re-handshake
-- [ ] 6.8 Implement network resilience — exponential backoff on 5xx/network errors, stop on 401 with auth error log, handle 409 by trusting server offset
-- [ ] 6.9 Implement signal handling — SIGTERM/SIGINT save state and exit cleanly
-- [ ] 6.10 Create `agent/launchd/com.danflow.sync.plist` — macOS launchd configuration for auto-start on login
+- [x] 6.1 Implement file discovery in `agent/danflow_sync.py` — scan cursor and claude base directories for *.jsonl, classify source type, detect subagent files and parent relationships
+- [x] 6.2 Implement project metadata extraction — resolve git remote URL via `git -C <dir> remote get-url origin`, compute project_hint by stripping user-specific path prefixes
+- [x] 6.3 Implement config loading from `~/.dan-flow/config.json` (stdlib json, no YAML dep)
+- [x] 6.4 Implement state persistence — load/save `~/.dan-flow/sync-state.json` with per-file offsets, graceful handling of missing/corrupt state
+- [x] 6.5 Implement handshake — POST file list + local sizes to `/sync/handshake`, receive server offsets, compute deltas
+- [x] 6.6 Implement incremental push — read new bytes from each changed file, POST to `/sync/push` in chunks of batch_size, advance local offset on ack
+- [x] 6.7 Implement main loop — poll interval scanning, detect new files, push changes, handle sleep/wake via time gap detection triggering re-handshake
+- [x] 6.8 Implement network resilience — exponential backoff on 5xx/network errors, stop on 401 with auth error log, handle 409 by trusting server offset
+- [x] 6.9 Implement signal handling — SIGTERM/SIGINT save state and exit cleanly
+- [x] 6.10 Create `agent/launchd/com.danflow.sync.plist` — macOS launchd configuration for auto-start on login
 
 ## 7. Session Hub frontend
 
