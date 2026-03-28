@@ -25,9 +25,9 @@
 
 ## 3. Identity system
 
-- [ ] 3.1 Create `server/app/auth.py` — `get_current_identity` dependency: extract Bearer token, SHA-256 hash, lookup in identities table, check enabled, return Identity or raise 401/403
-- [ ] 3.2 Create `server/app/services/callsign.py` — `generate_callsign_suggestions(name: str) -> list[dict]` calling Claude API with the prompt from design D10, with fallback to deterministic hash-based wordlist
-- [ ] 3.3 Create `server/app/routers/identities.py`:
+- [x] 3.1 Create `server/app/auth.py` — `get_current_identity` dependency: extract Bearer token, SHA-256 hash, lookup in identities table, check enabled, return Identity or raise 401/403
+- [x] 3.2 Create `server/app/services/callsign.py` — `generate_callsign_suggestions(name: str) -> list[dict]` calling Claude API with the prompt from design D10, with fallback to deterministic hash-based wordlist
+- [x] 3.3 Create `server/app/routers/identities.py`:
   - `GET /api/setup-status` — returns `{initialized: bool}` (any identities exist?)
   - `POST /api/setup` — first-access flow: accept name, create admin identity, generate token + call signs, return token (plaintext) + call sign suggestions
   - `POST /api/identities` — admin-only: create new identity, return token + call sign suggestions
@@ -38,22 +38,22 @@
 
 ## 4. Sync server endpoints
 
-- [ ] 4.1 Create `server/app/services/parser.py` — refactor `parse_cursor_line` and `parse_claude_line` from session-hub.py into stateless functions returning structured dicts with: role, text, timestamp, tool_name, tool_input_summary, has_hard_input, hard_question
-- [ ] 4.2 Create `server/app/services/project_resolver.py` — `resolve_project(git_remote, project_hint, source, db) -> Project`: implements the 5-tier resolution from design D7 (git remote exact → git remote new → canonical name match → alias glob → create new)
-- [ ] 4.3 Create `server/app/services/state_engine.py` — `compute_session_state(session, messages) -> dict`: port session state inference logic from session-hub.py `_session_state()`, returning state/snippet/phase/input_type
-- [ ] 4.4 Create `server/app/routers/sync.py`:
+- [x] 4.1 Create `server/app/services/parser.py` — refactor `parse_cursor_line` and `parse_claude_line` from session-hub.py into stateless functions returning structured dicts with: role, text, timestamp, tool_name, tool_input_summary, has_hard_input, hard_question
+- [x] 4.2 Create `server/app/services/project_resolver.py` — `resolve_project(git_remote, project_hint, source, db) -> Project`: implements the 5-tier resolution from design D7 (git remote exact → git remote new → canonical name match → alias glob → create new)
+- [x] 4.3 Create `server/app/services/state_engine.py` — `compute_session_state(session, messages) -> dict`: port session state inference logic from session-hub.py `_session_state()`, returning state/snippet/phase/input_type
+- [x] 4.4 Create `server/app/routers/sync.py`:
   - `POST /sync/handshake` — accept file list with sizes from identity, return known offsets per file from sync_offsets table
   - `POST /sync/push` — accept file_path, source, project_hint, git_remote, offset, data; validate offset matches expected; parse JSONL lines into messages; resolve project; update session and sync_offset; return ack_offset. Handle 409 on offset mismatch, skip malformed lines
   - `GET /sync/status` — admin-only: per-identity sync health stats
 
 ## 5. Hub API endpoints
 
-- [ ] 5.1 Create `server/app/routers/sessions.py`:
+- [x] 5.1 Create `server/app/routers/sessions.py`:
   - `GET /api/sessions` — return all sessions grouped by project with computed state, identity call signs, sub-agent counts; support `?identity=` filter; sort active first then by last_modified
   - `GET /api/session/{session_id}` — return full message list for a session
   - `GET /api/projects` — return all projects with per-identity session counts and last activity
-- [ ] 5.2 Create `server/app/routers/health.py` — `GET /health` returning db status and version (unauthenticated)
-- [ ] 5.3 Wire all routers into `main.py` with appropriate prefixes and auth dependencies
+- [x] 5.2 Create `server/app/routers/health.py` — `GET /health` returning db status and version (unauthenticated)
+- [x] 5.3 Wire all routers into `main.py` with appropriate prefixes and auth dependencies
 
 ## 6. Sync agent
 

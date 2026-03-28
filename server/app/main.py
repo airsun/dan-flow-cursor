@@ -42,11 +42,34 @@ app.add_middleware(
 )
 
 
-@app.get("/health")
-async def health():
-    return {"status": "ok", "version": "0.1.0"}
+from .routers import identities, sync, sessions, health as health_router  # noqa: E402
+
+app.include_router(identities.router)
+app.include_router(sync.router)
+app.include_router(sessions.router)
+app.include_router(health_router.router)
 
 
 @app.get("/api/capabilities")
-async def capabilities():
-    return {"mode": "server"}
+async def capabilities(authorization: str | None = None):
+    from .auth import hash_token
+    from .database import async_session_factory
+    from .models import Identity
+    from sqlalchemy import select
+
+    base = {"mode": "server"}
+
+    if authorization and authorization.startswith("Bearer "):
+        token_h = hash_token(authorization[7:])
+        async with async_session_factory() as db:
+            result = await db.execute(
+                select(Identity).where(Identity.token_hash == token_h)
+            )
+            ident = result.scalar_one_or_none()
+            if ident and ident.enabled:
+                base["identity"] = {
+                    "name": ident.name,
+                    "callSign": ident.call_sign,
+                    "isAdmin": ident.is_admin,
+                }
+    return base
