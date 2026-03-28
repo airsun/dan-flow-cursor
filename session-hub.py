@@ -363,6 +363,35 @@ def get_session_messages_api(session_key: str):
         }
 
 
+def get_capabilities_api():
+    return {"mode": "local"}
+
+
+def get_projects_api():
+    now = time.time()
+    projects: Dict[str, dict] = {}
+    with sessions_lock:
+        for key, s in sessions_data.items():
+            if not s["messages"] or s.get("parentKey"):
+                continue
+            name = s["project"]
+            if name not in projects:
+                projects[name] = {
+                    "name": name,
+                    "sessionCount": 0,
+                    "activeCount": 0,
+                    "lastActivity": 0.0,
+                }
+            p = projects[name]
+            p["sessionCount"] += 1
+            if (now - s["last_modified"]) < ACTIVE_THRESHOLD:
+                p["activeCount"] += 1
+            if s["last_modified"] > p["lastActivity"]:
+                p["lastActivity"] = s["last_modified"]
+    result = sorted(projects.values(), key=lambda x: -x["lastActivity"])
+    return result
+
+
 # ═══════════════════════════════════════════════════════════════
 #  HTTP Handler
 # ═══════════════════════════════════════════════════════════════
@@ -375,8 +404,12 @@ class Handler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path
         if path == "/":
             self._html(get_html())
+        elif path == "/api/capabilities":
+            self._json(get_capabilities_api())
         elif path == "/api/sessions":
             self._json(get_sessions_api())
+        elif path == "/api/projects":
+            self._json(get_projects_api())
         elif path.startswith("/api/session/"):
             key = unquote(self.path[len("/api/session/"):])
             self._json(get_session_messages_api(key))

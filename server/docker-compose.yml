@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgres:16-alpine
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: danflow
+      POSTGRES_USER: danflow
+      POSTGRES_PASSWORD: ${DANFLOW_DB_PASSWORD:?set DANFLOW_DB_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U danflow"]
+      interval: 5s
+      retries: 5
+
+  api:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://danflow:${DANFLOW_DB_PASSWORD}@db:5432/danflow
+      DATABASE_URL_SYNC: postgresql://danflow:${DANFLOW_DB_PASSWORD}@db:5432/danflow
+      DANFLOW_CLAUDE_API_KEY: ${DANFLOW_CLAUDE_API_KEY:-}
+    expose:
+      - "8000"
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "${DANFLOW_PORT:-443}:443"
+      - "${DANFLOW_HTTP_PORT:-80}:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ../session-hub.html:/usr/share/nginx/html/index.html:ro
+      - ./certs:/etc/nginx/certs:ro
+    depends_on:
+      - api
+
+volumes:
+  pgdata:

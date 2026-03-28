@@ -1,27 +1,27 @@
 ## 0. Local hub contract alignment (Phase 0)
 
-- [ ] 0.1 Add `GET /api/capabilities` to `session-hub.py` returning `{mode: "local"}`
-- [ ] 0.2 Add `GET /api/projects` to `session-hub.py` — group sessions by project name, return `[{name, sessionCount, activeCount, lastActivity}]`
-- [ ] 0.3 Add capabilities probe to `session-hub.html` — on load call `/api/capabilities`, store result in global `hubCaps`
-- [ ] 0.4 Add conditional rendering skeleton in frontend — guard future server-only UI blocks with `if (hubCaps.mode === 'server')`
-- [ ] 0.5 Verify: local hub works exactly as before with the new endpoints and probe
+- [x] 0.1 Add `GET /api/capabilities` to `session-hub.py` returning `{mode: "local"}`
+- [x] 0.2 Add `GET /api/projects` to `session-hub.py` — group sessions by project name, return `[{name, sessionCount, activeCount, lastActivity}]`
+- [x] 0.3 Add capabilities probe to `session-hub.html` — on load call `/api/capabilities`, store result in global `hubCaps`
+- [x] 0.4 Add conditional rendering skeleton in frontend — guard future server-only UI blocks with `if (hubCaps.mode === 'server')`
+- [x] 0.5 Verify: local hub works exactly as before with the new endpoints and probe
 
 ## 1. Project scaffolding
 
-- [ ] 1.1 Create `server/` directory structure: `app/`, `app/routers/`, `app/services/`, `app/migrations/`, `nginx/`
-- [ ] 1.2 Create `server/requirements.txt` with FastAPI, uvicorn, SQLAlchemy, asyncpg, alembic, psycopg2-binary, httpx (for Claude API)
-- [ ] 1.3 Create `server/Dockerfile` — Python 3.12 slim, install deps, copy app, run uvicorn
-- [ ] 1.4 Create `server/docker-compose.yml` with db (postgres:16-alpine), api, nginx services and volume mounts
-- [ ] 1.5 Create `server/nginx/nginx.conf` — reverse proxy `/api/` and `/sync/` to api:8000, serve `/` from `../../session-hub.html` (shared frontend), TLS config with cert mount
-- [ ] 1.6 Create `agent/` directory with empty `danflow_sync.py`
+- [x] 1.1 Create `server/` directory structure: `app/`, `app/routers/`, `app/services/`, `app/migrations/`, `nginx/`
+- [x] 1.2 Create `server/requirements.txt` with FastAPI, uvicorn, SQLAlchemy, asyncpg, alembic, psycopg2-binary, httpx (for Claude API)
+- [x] 1.3 Create `server/Dockerfile` — Python 3.12 slim, install deps, copy app, run uvicorn
+- [x] 1.4 Create `server/docker-compose.yml` with db (postgres:16-alpine), api, nginx services and volume mounts
+- [x] 1.5 Create `server/nginx/nginx.conf` — reverse proxy `/api/` and `/sync/` to api:8000, serve `/` from `../../session-hub.html` (shared frontend), TLS config with cert mount
+- [x] 1.6 Create `agent/` directory with empty `danflow_sync.py`
 
 ## 2. Database layer
 
-- [ ] 2.1 Create `server/app/config.py` — Pydantic settings loading DATABASE_URL, DANFLOW_CLAUDE_API_KEY, JWT_SECRET from env
-- [ ] 2.2 Create `server/app/database.py` — SQLAlchemy engine, sessionmaker, Base declarative
-- [ ] 2.3 Create `server/app/models.py` — ORM models: Identity, Project, ProjectAlias, Session, Message, SyncOffset per design D2 and proposal data model
-- [ ] 2.4 Initialize Alembic in `server/app/migrations/`, create initial migration from models
-- [ ] 2.5 Create `server/app/main.py` — FastAPI app with lifespan that runs alembic upgrade head on startup
+- [x] 2.1 Create `server/app/config.py` — Pydantic settings loading DATABASE_URL, DANFLOW_CLAUDE_API_KEY from env
+- [x] 2.2 Create `server/app/database.py` — SQLAlchemy async engine, sessionmaker, Base declarative
+- [x] 2.3 Create `server/app/models.py` — ORM models: Identity, Project, ProjectAlias, Session, Message, SyncOffset per design D2 and proposal data model
+- [x] 2.4 Initialize Alembic in `server/app/migrations/`, env.py + script template configured
+- [x] 2.5 Create `server/app/main.py` — FastAPI app with lifespan that runs alembic upgrade head on startup
 
 ## 3. Identity system
 

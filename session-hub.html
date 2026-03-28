@@ -444,6 +444,18 @@
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
   }
   .sidebar-collapsed .sidebar-sub-badge { display: none; }
+
+  /* ── Server-mode UI (hidden in local mode) ── */
+  .server-only { display: none; }
+  .server-mode .server-only { display: flex; }
+  .identity-filter {
+    background: var(--bg-surface); border: 1px solid var(--border);
+    color: var(--text); font-size: 11px; padding: 3px 8px;
+    border-radius: 4px; cursor: pointer;
+  }
+  .identity-badge {
+    font-size: 11px; margin-left: 4px;
+  }
 </style>
 </head>
 <body>
@@ -461,6 +473,7 @@
       <button id="btn-back">◀ 工作台</button>
       <span class="title" id="header-title">Workbench</span>
       <span class="subtitle" id="header-sub"></span>
+      <span class="server-only" id="server-identity"></span>
     </div>
     <div id="workbench">
       <div id="needs-input-zone" class="hidden">
@@ -513,6 +526,22 @@ var elWbEmpty = document.getElementById('wb-empty');
 var elTabs = document.getElementById('wb-tabs');
 var currentTab = 'all';
 var lastSessions = [];
+var hubCaps = {mode: 'local'};
+
+fetchJson('/api/capabilities').then(function(caps) {
+  hubCaps = caps || {mode: 'local'};
+  applyServerMode();
+}).catch(function() {});
+
+function applyServerMode() {
+  if (hubCaps.mode !== 'server') return;
+  document.body.classList.add('server-mode');
+  var idEl = document.getElementById('server-identity');
+  if (idEl && hubCaps.identity) {
+    idEl.textContent = (hubCaps.identity.callSign || '') + ' ' + (hubCaps.identity.name || '');
+    idEl.className = 'identity-badge server-only';
+  }
+}
 
 elMsgs.addEventListener('scroll', function() {
   autoScroll = (elMsgs.scrollHeight - elMsgs.scrollTop - elMsgs.clientHeight) < 80;
@@ -1034,7 +1063,12 @@ function buildMsgEl(m) {
 }
 
 function fetchJson(url) {
-  return fetch(url).then(function(r) { return r.json(); });
+  var opts = {};
+  var token = localStorage.getItem('danflow_token');
+  if (token) {
+    opts.headers = {'Authorization': 'Bearer ' + token};
+  }
+  return fetch(url, opts).then(function(r) { return r.json(); });
 }
 
 function loadMessages() {
